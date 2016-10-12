@@ -1,6 +1,9 @@
 require 'trello'
 require 'asana'
 require 'optparse'
+require 'open-uri'
+require 'tempfile'
+require 'mime-types'
 
 options = {}
 OptionParser.new do |opts|
@@ -67,6 +70,25 @@ board.lists.each do |list|
     card.comments.each do |comment|
       text = "Imported Trello comment from #{member_names[comment.member_creator_id]}:\n\n#{comment.text}"
       asana.stories.create_on_task(task: task.id, text: text)
+    end
+
+    card.attachments.each do |attachment|
+      puts "Found attachment: #{attachment.name}"
+
+      begin
+        open(attachment.url) do |file|
+          Tempfile.open(attachment.name) do |tmp|
+            IO.copy_stream(file, tmp)
+            tmp.close
+
+            mime_type = MIME::Types.type_for(tmp.path).first || MIME::Types['application/octet-stream'].first
+
+            task.attach(filename: tmp.path, mime: mime.content_type)
+          end
+        end
+      rescue Exception => e
+        puts "Unable to upload attachment: #{attachment.attributes} - #{e.message}"
+      end
     end
 
     card.checklists.each do |checklist|

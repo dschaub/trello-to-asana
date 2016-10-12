@@ -65,7 +65,8 @@ PLATFORMS
 
 DEPENDENCIES
   asana
+  mime-types
   ruby-trello
 
 BUNDLED WITH
-   1.12.5
+   1.13.2
