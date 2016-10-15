@@ -81,7 +81,7 @@ board.lists.each do |list|
             IO.copy_stream(file, tmp)
             tmp.close
 
-            mime_type = MIME::Types.type_for(tmp.path).first || MIME::Types['application/octet-stream'].first
+            mime = MIME::Types.type_for(tmp.path).first || MIME::Types['application/octet-stream'].first
 
             task.attach(filename: tmp.path, mime: mime.content_type)
           end
