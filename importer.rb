@@ -40,26 +40,36 @@ end
 SOURCE_BOARD = options[:source_board_id]
 DESTINATION_PROJECT = options[:destination_project_id]
 
+project = asana.projects.find_by_id(DESTINATION_PROJECT)
+
 board = Trello::Board.find(SOURCE_BOARD)
 
+puts "Loading Asana users..."
+asana_users = asana.users.find_by_workspace(workspace: project.workspace["id"])
+
 puts "Caching board members..."
-member_names = board.members.each_with_object({}) do |member, memo|
-  memo[member.id] = member.full_name
+trello_members = board.members.each_with_object({}) do |member, memo|
+  asana_user = asana_users.find { |u| u.name.strip.downcase == member.full_name.strip.downcase }
+  puts "No Asana user for #{member.full_name}" unless asana_user
+  memo[member.id] = { full_name: member.full_name, asana_id: asana_user ? asana_user.id : nil }
 end
 
 board.lists.each do |list|
-  section = asana.tasks.create(projects: DESTINATION_PROJECT, name: "#{list.name}:")
+  section = asana.tasks.create(projects: [project.id], name: "#{list.name}:")
   puts "Created section for list #{list.name}"
 
   list.cards.each do |card|
     task_params = {
       name: card.name,
       notes: card.desc,
-      projects: DESTINATION_PROJECT,
+      due_at: card.due,
+      assignee: card.member_ids.take(1).map { |m_id| trello_members[m_id][:asana_id] }.first,
+      followers: card.member_ids.drop(1).map { |m_id| trello_members[m_id][:asana_id] }.compact,
+      projects: [project.id],
       memberships: [
         {
           section: section.id,
-          project: DESTINATION_PROJECT
+          project: project.id
         }
       ]
     }
@@ -68,7 +78,9 @@ board.lists.each do |list|
     puts "Created task for #{card.name}"
 
     card.comments.each do |comment|
-      text = "Imported Trello comment from #{member_names[comment.member_creator_id]}:\n\n#{comment.text}"
+      puts "Unknown member: #{comment.member_creator_id}" unless trello_members[comment.member_creator_id]
+      member_name = trello_members[comment.member_creator_id] ? trello_members[comment.member_creator_id][:full_name] : 'Unknown'
+      text = "Imported Trello comment from #{member_name}:\n\n#{comment.text}"
       asana.stories.create_on_task(task: task.id, text: text)
     end
 
