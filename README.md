@@ -14,7 +14,7 @@ Navigate to the board you want to copy from and grab the board token from url
 
 ## Asana
 ### Tokens
-Get your Asana access token by logging into Asana and going to your profile.
+To get your Asana access token, log in to Asana. Go to "My Profile Settings...", and navigate to the Apps tab. Click "Manage Developer Apps", then click "+ Create New Personal Access Token."
 
 ### Project
 Navigate to the project you want to copy and grab the project ID from the url
